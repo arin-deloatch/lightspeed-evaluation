@@ -252,6 +252,124 @@ class VisualizationConfig(BaseModel):
         return v
 
 
+class JudgeConfig(BaseModel):
+    """Configuration for a single judge in the panel."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    judge_id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier for this judge (auto-generated if not provided)",
+    )
+    provider: str = Field(
+        min_length=1,
+        description="LLM provider for this judge (e.g., openai, anthropic, gemini)",
+    )
+    model: str = Field(
+        min_length=1,
+        description="Model identifier for this judge",
+    )
+    temperature: float = Field(
+        default=DEFAULT_LLM_TEMPERATURE,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for this judge",
+    )
+    max_tokens: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Maximum tokens for this judge (uses system default if not specified)",
+    )
+    timeout: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Request timeout for this judge (uses system default if not specified)",
+    )
+    num_retries: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Retry attempts for this judge (uses system default if not specified)",
+    )
+    weight: float = Field(
+        default=1.0,
+        gt=0.0,
+        description="Weight for this judge when using weighted aggregation",
+    )
+
+
+class PanelOfJudgesConfig(BaseModel):
+    """Configuration for panel of judges evaluation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(
+        default=False,
+        description="Enable panel of judges evaluation (uses single LLM if false)",
+    )
+    apply_to: list[str] = Field(
+        default_factory=lambda: ["geval", "custom"],
+        description="Metric types that should use panel evaluation (e.g., 'geval', 'custom')",
+    )
+    aggregation_method: str = Field(
+        default="mean",
+        description="Method to aggregate scores from judges (mean, median, weighted_mean)",
+    )
+    output_individual_scores: bool = Field(
+        default=False,
+        description="Include individual judge scores in CSV output (verbose mode)",
+    )
+    judges: list[JudgeConfig] = Field(
+        default_factory=list,
+        min_length=1,
+        description="List of judge configurations (at least one judge required if enabled)",
+    )
+
+    @field_validator("aggregation_method")
+    @classmethod
+    def validate_aggregation_method(cls, v: str) -> str:
+        """Validate aggregation method is supported."""
+        allowed_methods = {"mean", "median", "weighted_mean"}
+        if v not in allowed_methods:
+            raise ValueError(
+                f"Unsupported aggregation method '{v}'. Allowed: {sorted(allowed_methods)}"
+            )
+        return v
+
+    @field_validator("apply_to")
+    @classmethod
+    def validate_apply_to(cls, v: list[str]) -> list[str]:
+        """Validate metric types are supported."""
+        allowed_types = {"geval", "custom", "deepeval"}
+        for metric_type in v:
+            if metric_type not in allowed_types:
+                raise ValueError(
+                    f"Unsupported metric type '{metric_type}'. Allowed: {sorted(allowed_types)}"
+                )
+        return v
+
+    @field_validator("judges")
+    @classmethod
+    def validate_judges(cls, v: list[JudgeConfig], info) -> list[JudgeConfig]:
+        """Validate judges configuration."""
+        # Check if enabled but no judges configured
+        if info.data.get("enabled", False) and len(v) == 0:
+            raise ValueError(
+                "At least one judge must be configured when panel_of_judges is enabled"
+            )
+
+        # Auto-generate judge IDs if not provided
+        for i, judge in enumerate(v, 1):
+            if not judge.judge_id:
+                judge.judge_id = f"judge_{i}"
+
+        # Check for duplicate judge IDs
+        judge_ids = [judge.judge_id for judge in v]
+        if len(judge_ids) != len(set(judge_ids)):
+            raise ValueError("Duplicate judge_id values found in judges configuration")
+
+        return v
+
+
 class CoreConfig(BaseModel):
     """Core evaluation configuration (e.g., concurrency limits)."""
 
@@ -286,6 +404,10 @@ class SystemConfig(BaseModel):
     )
     visualization: VisualizationConfig = Field(
         default_factory=VisualizationConfig, description="Visualization configuration"
+    )
+    panel_of_judges: PanelOfJudgesConfig = Field(
+        default_factory=PanelOfJudgesConfig,
+        description="Panel of judges configuration (optional)",
     )
 
     # Default metrics metadata from system config

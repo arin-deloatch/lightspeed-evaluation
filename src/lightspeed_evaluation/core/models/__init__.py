@@ -16,9 +16,11 @@ from lightspeed_evaluation.core.models.system import (
     APIConfig,
     CoreConfig,
     EmbeddingConfig,
+    JudgeConfig,
     LLMConfig,
     LoggingConfig,
     OutputConfig,
+    PanelOfJudgesConfig,
     SystemConfig,
     VisualizationConfig,
 )
@@ -39,6 +41,8 @@ __all__ = [
     "LoggingConfig",
     "SystemConfig",
     "VisualizationConfig",
+    "JudgeConfig",
+    "PanelOfJudgesConfig",
     # API models
     "APIRequest",
     "APIResponse",
