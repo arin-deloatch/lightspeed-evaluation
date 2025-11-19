@@ -13,6 +13,7 @@ from lightspeed_evaluation.core.models import (
     LLMConfig,
     LoggingConfig,
     OutputConfig,
+    PanelOfJudgesConfig,
     SystemConfig,
     VisualizationConfig,
 )
@@ -118,6 +119,9 @@ class ConfigLoader:  # pylint: disable=too-few-public-methods
             output=OutputConfig(**config_data.get("output", {})),
             logging=LoggingConfig(**config_data.get("logging", {})),
             visualization=VisualizationConfig(**config_data.get("visualization", {})),
+            panel_of_judges=PanelOfJudgesConfig(
+                **config_data.get("panel_of_judges", {})
+            ),
             default_turn_metrics_metadata=metrics_metadata.get("turn_level", {}),
             default_conversation_metrics_metadata=metrics_metadata.get(
                 "conversation_level", {}

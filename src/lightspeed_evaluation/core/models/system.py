@@ -290,11 +290,6 @@ class JudgeConfig(BaseModel):
         ge=0,
         description="Retry attempts for this judge (uses system default if not specified)",
     )
-    weight: float = Field(
-        default=1.0,
-        gt=0.0,
-        description="Weight for this judge when using weighted aggregation",
-    )
 
 
 class PanelOfJudgesConfig(BaseModel):
@@ -349,23 +344,30 @@ class PanelOfJudgesConfig(BaseModel):
 
     @field_validator("judges")
     @classmethod
-    def validate_judges(cls, v: list[JudgeConfig], info) -> list[JudgeConfig]:
-        """Validate judges configuration."""
-        # Check if enabled but no judges configured
-        if info.data.get("enabled", False) and len(v) == 0:
-            raise ValueError(
-                "At least one judge must be configured when panel_of_judges is enabled"
-            )
-
+    def validate_judges(cls, v: list[JudgeConfig]) -> list[JudgeConfig]:
+        """Validate judges configuration and auto-generate IDs if needed."""
         # Auto-generate judge IDs if not provided
-        for i, judge in enumerate(v, 1):
+        # Format: provider_model (e.g., "openai_gpt-4", "anthropic_claude-3-sonnet")
+        for judge in v:
             if not judge.judge_id:
-                judge.judge_id = f"judge_{i}"
+                # Create descriptive ID from provider and model
+                # Sanitize model name to remove slashes and special chars
+                sanitized_model = (
+                    judge.model.replace("/", "_").replace(":", "_").replace(".", "_")
+                )
+                judge.judge_id = f"{judge.provider}_{sanitized_model}"
 
         # Check for duplicate judge IDs
         judge_ids = [judge.judge_id for judge in v]
         if len(judge_ids) != len(set(judge_ids)):
-            raise ValueError("Duplicate judge_id values found in judges configuration")
+            # If duplicates exist (e.g., same model used twice), add numeric suffix
+            seen: dict = {}
+            for judge in v:
+                if judge.judge_id in seen:
+                    seen[judge.judge_id] += 1
+                    judge.judge_id = f"{judge.judge_id}_{seen[judge.judge_id]}"
+                else:
+                    seen[judge.judge_id] = 1
 
         return v
 
