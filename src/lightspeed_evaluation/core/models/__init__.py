@@ -22,6 +22,11 @@ from lightspeed_evaluation.core.models.data import (
     TurnData,
 )
 from lightspeed_evaluation.core.models.mixins import StreamingMetricsMixin
+from lightspeed_evaluation.core.models.red_team import (
+    RedTeamConfig,
+    RedTeamResult,
+    RedTeamSummary,
+)
 from lightspeed_evaluation.core.models.system import (
     APIConfig,
     CoreConfig,
@@ -91,6 +96,10 @@ __all__ = [
     "APIRequest",
     "APIResponse",
     "AttachmentData",
+    # Red team models
+    "RedTeamConfig",
+    "RedTeamResult",
+    "RedTeamSummary",
     # Mixins
     "StreamingMetricsMixin",
 ]

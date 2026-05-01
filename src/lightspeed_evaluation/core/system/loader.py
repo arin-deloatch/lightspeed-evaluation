@@ -15,6 +15,7 @@ from lightspeed_evaluation.core.models import (
     SystemConfig,
     VisualizationConfig,
 )
+from lightspeed_evaluation.core.models.red_team import RedTeamConfig
 from lightspeed_evaluation.core.models.system import (
     JudgePanelConfig,
     LLMPoolConfig,
@@ -149,6 +150,9 @@ class ConfigLoader:  # pylint: disable=too-few-public-methods
         judge_panel_data = config_data.get("judge_panel")
         judge_panel = JudgePanelConfig(**judge_panel_data) if judge_panel_data else None
 
+        red_team_data = config_data.get("red_team")
+        red_team = RedTeamConfig(**red_team_data) if red_team_data else None
+
         # Parse storage backends with backward compatibility for legacy 'output' section
         storage_data = self._get_storage_config_with_backward_compat(config_data)
         storage_backends = self._parse_storage_config(storage_data)
@@ -165,6 +169,7 @@ class ConfigLoader:  # pylint: disable=too-few-public-methods
             llm_pool=llm_pool,
             judge_panel=judge_panel,
             quality_score=quality_score_config,
+            red_team=red_team,
             default_turn_metrics_metadata=turn_level_metadata,
             default_conversation_metrics_metadata=conversation_level_metadata,
         )

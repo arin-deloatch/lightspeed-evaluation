@@ -39,6 +39,7 @@ from lightspeed_evaluation.core.models.agents import (
     HttpApiBaseFields,
     MCPHeadersConfig,
 )
+from lightspeed_evaluation.core.models.red_team import RedTeamConfig
 from lightspeed_evaluation.core.storage.config import StorageBackendConfig
 from lightspeed_evaluation.core.system.exceptions import ConfigurationError
 
@@ -787,6 +788,10 @@ class SystemConfig(BaseModel):
     )
     visualization: VisualizationConfig = Field(
         default_factory=VisualizationConfig, description="Visualization configuration"
+    )
+    red_team: Optional[RedTeamConfig] = Field(
+        default=None,
+        description="Optional red team configuration. Populated when 'red_team:' in system.yaml.",
     )
 
     # Quality score configuration
