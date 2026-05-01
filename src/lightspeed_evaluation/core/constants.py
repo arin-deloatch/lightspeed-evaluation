@@ -125,6 +125,10 @@ SUPPORTED_GRAPH_TYPES = [
     "status_breakdown",
 ]
 
+SUPPORTED_RED_TEAM_GRAPH_TYPES = ["vulnerability_breakdown"]
+
+DEFAULT_RED_TEAM_OUTPUT_DIR = "./red_team_output"
+
 DEFAULT_VISUALIZATION_FIGSIZE = [12, 8]
 DEFAULT_VISUALIZATION_DPI = 300
 
