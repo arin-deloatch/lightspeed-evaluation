@@ -13,6 +13,7 @@ from matplotlib.colors import BASE_COLORS
 from lightspeed_evaluation.core.constants import (
     DEFAULT_OUTPUT_DIR,
     SUPPORTED_GRAPH_TYPES,
+    SUPPORTED_RED_TEAM_GRAPH_TYPES,
 )
 from lightspeed_evaluation.core.models import EvaluationResult
 from lightspeed_evaluation.core.output.statistics import (
@@ -451,6 +452,96 @@ class GraphGenerator:  # pylint: disable=too-few-public-methods
 
         # Save
         filename = self.graphs_dir / f"{base_filename}_conversation_heatmap.png"
+        plt.savefig(filename, dpi=self.dpi, bbox_inches="tight")
+        plt.close()
+
+        return filename
+
+    def generate_red_team_graphs(
+        self,
+        summary: Any,
+        base_filename: str,
+        enabled_graphs: Optional[list[str]] = None,
+    ) -> dict[str, str]:
+        """Generate red team visualization graphs from a RedTeamSummary."""
+        if enabled_graphs is None:
+            enabled_graphs = SUPPORTED_RED_TEAM_GRAPH_TYPES
+
+        graph_files: dict[str, str] = {}
+
+        try:
+            if "vulnerability_breakdown" in enabled_graphs:
+                path = self._generate_vulnerability_breakdown_graph(
+                    summary.by_vulnerability, base_filename
+                )
+                if path:
+                    graph_files["vulnerability_breakdown"] = str(path)
+        except (ValueError, RuntimeError, OSError) as e:
+            self.logger.error("Red team graph generation error: %s", e, exc_info=True)
+
+        self.logger.info("Generated %d red team graphs", len(graph_files))
+        return graph_files
+
+    def _generate_vulnerability_breakdown_graph(
+        self,
+        by_vulnerability: dict[str, Any],
+        base_filename: str,
+    ) -> Optional[Path]:
+        """Grouped bar chart showing exploited vs safe counts per vulnerability."""
+        if not by_vulnerability:
+            return None
+
+        labels = list(by_vulnerability.keys())
+        exploited_counts = [by_vulnerability[v].exploited for v in labels]
+        safe_counts = [by_vulnerability[v].safe for v in labels]
+        exploit_rates = [by_vulnerability[v].exploitation_rate for v in labels]
+
+        x = np.arange(len(labels))
+        bar_width = 0.35
+
+        _, ax = plt.subplots(figsize=tuple(self.figsize), dpi=self.dpi)
+
+        bars_exploit = ax.bar(
+            x - bar_width / 2,
+            exploited_counts,
+            bar_width,
+            label="Exploited",
+            color=CHART_COLORS["FAIL"],
+            alpha=0.85,
+        )
+        ax.bar(
+            x + bar_width / 2,
+            safe_counts,
+            bar_width,
+            label="Safe",
+            color=CHART_COLORS["PASS"],
+            alpha=0.85,
+        )
+
+        # Label each exploited bar with its exploitation rate
+        for exploit_bar, rate in zip(bars_exploit, exploit_rates):
+            if exploit_bar.get_height() > 0:
+                ax.text(
+                    exploit_bar.get_x() + exploit_bar.get_width() / 2.0,
+                    exploit_bar.get_height() + 0.1,
+                    f"{rate:.1f}%",
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                    color=CHART_COLORS["FAIL"],
+                    fontweight="bold",
+                )
+
+        ax.set_title("Red Team Vulnerability Breakdown", fontsize=16, fontweight="bold")
+        ax.set_xlabel("Vulnerability Class", fontsize=12)
+        ax.set_ylabel("Attack Count", fontsize=12)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=30, ha="right")
+        ax.legend()
+
+        plt.tight_layout()
+
+        filename = self.graphs_dir / f"{base_filename}_vulnerability_breakdown.png"
         plt.savefig(filename, dpi=self.dpi, bbox_inches="tight")
         plt.close()
 
