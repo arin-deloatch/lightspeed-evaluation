@@ -1,5 +1,7 @@
 """LightSpeed Evaluation Framework - Main Evaluation Runner."""
 
+# pylint: disable=duplicate-code
+
 import argparse
 import shutil
 import sys

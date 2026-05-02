@@ -23,7 +23,7 @@ For structured results with computed statistics::
     print(summary.by_metric)
 """
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from lightspeed_evaluation.core.models import (
     EvaluationData,
@@ -34,6 +34,10 @@ from lightspeed_evaluation.core.models import (
 from lightspeed_evaluation.core.models.summary import EvaluationSummary
 from lightspeed_evaluation.core.system import ConfigLoader
 from lightspeed_evaluation.pipeline.evaluation import EvaluationPipeline
+from lightspeed_evaluation.pipeline.red_team.pipeline import RedTeamPipeline
+
+if TYPE_CHECKING:
+    from lightspeed_evaluation.core.models.red_team import RedTeamSummary
 
 
 def evaluate(
@@ -211,3 +215,26 @@ def evaluate_turn_with_summary(
         output_dir=output_dir,
         compute_confidence_intervals=False,
     )
+
+
+def run_red_team(config: SystemConfig) -> "RedTeamSummary":
+    """Run adversarial red team evaluation against the configured target.
+
+    Requires ``config.red_team`` to be a populated ``RedTeamConfig`` instance.
+    Synchronous and blocking. Do NOT call from within a running event loop
+    (async context, Jupyter, FastAPI) — use ``RedTeamPipeline`` directly there.
+
+    Args:
+        config: SystemConfig with the ``red_team`` field populated.
+
+    Returns:
+        RedTeamSummary with all attack results and aggregate statistics.
+
+    Raises:
+        ConfigurationError: If ``config.red_team`` is None.
+        ConfigurationError: If api.enabled is False and llm_model_id is not set.
+    """
+    loader = ConfigLoader.from_config(config)
+    _ = loader  # ensures env vars (DEEPEVAL_TELEMETRY_OPT_OUT etc.) are set first
+    pipeline = RedTeamPipeline(config)
+    return pipeline.run()
